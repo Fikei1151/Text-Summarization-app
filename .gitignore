@@ -1,0 +1,57 @@
+# ไฟล์ที่เกี่ยวข้องกับระบบปฏิบัติการ
+.DS_Store
+Thumbs.db
+
+*.safetensors
+# ไฟล์ Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.pyenv/
+
+# ไฟล์ Python ที่คอมไพล์
+*.py[cod]
+__pycache__/
+*.so
+
+# ไฟล์ตั้งค่า editor
+.vscode/
+.idea/
+
+# ไฟล์ที่เกี่ยวข้องกับ Jupyter
+.ipynb_checkpoints/
+
+# ไฟล์ log
+*.log
+
+# ไฟล์จาก Hugging Face ที่ดาวน์โหลดโมเดล
+*.bin
+*.model
+cached_model_*
+transformers_cache/
+
+# ไฟล์ที่เกี่ยวกับ Docker
+docker-compose.override.yml
+*.dockerfile
+*.dockercfg
+
+# ไฟล์ที่เกี่ยวข้องกับ Flask
+instance/
+*.sqlite3
+
+# ไฟล์ที่เกี่ยวข้องกับ Node.js (ถ้ามี frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ข้อมูลหรือไฟล์ลับที่ไม่ต้องการติดตาม
+.env
+*.key
+*.pem
+
+# ไฟล์ที่ใช้ในระบบ Windows
+*.exe
+*.dll
+*.bat
