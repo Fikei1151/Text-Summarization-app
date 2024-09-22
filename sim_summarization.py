@@ -6,6 +6,7 @@ device = "cuda" if cuda.is_available() else "cpu"
 
 # โหลด tokenizer และโมเดลจาก Hugging Face โดยตรง
 tokenizer = AutoTokenizer.from_pretrained("csebuetnlp/mT5_multilingual_XLSum")
+
 model = MT5ForConditionalGeneration.from_pretrained("csebuetnlp/mT5_multilingual_XLSum").to(device)
 #tokenizer = AutoTokenizer.from_pretrained("thanathorn/mt5-cpe-kmutt-thai-sentence-sum")
 #model = MT5ForConditionalGeneration.from_pretrained("thanathorn/mt5-cpe-kmutt-thai-sentence-sum").to(device)
@@ -44,7 +45,8 @@ def summarize_text(sentence, length_type="short"):
     )
 
     # ถอดรหัสผลลัพธ์ที่ได้
-    prediction = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    prediction = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
     
     return prediction
 
