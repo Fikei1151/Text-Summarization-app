@@ -1,82 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Summarization Tool</title>
-    <!-- ลิงค์ไปที่ Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>โปรแกรมสรุปข้อความภาษาไทย</title>
+    <!-- เพิ่ม Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Text Summarization Tool</h1>
-        <div class="row">
-            <!-- ฝั่งกรอกข้อความ (ซ้าย) -->
-            <div class="col-md-6">
-                <form id="summaryForm">
-                    <div class="mb-3">
-                        <label for="text" class="form-label">กรอกข้อความที่ต้องการสรุป:</label>
-                        <textarea id="text" name="text" class="form-control" rows="10" oninput="updateInputCount()"></textarea>
-                        <small class="text-muted">จำนวนคำที่พิมพ์: <span id="inputWordCount">0</span></small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="summary_type" class="form-label">เลือกประเภทการสรุป:</label>
-                        <select id="summary_type" name="summary_type" class="form-select">
-                            <option value="short">สั้น</option>
-                            <option value="medium">กลาง</option>
-                            <option value="long">ยาว</option>
-                        </select>
-                    </div>
-
-                    <button type="button" class="btn btn-primary" onclick="generateSummary()">สรุปข้อความ</button>
-                </form>
+        <h1 class="text-center">โปรแกรมสรุปข้อความภาษาไทย</h1>
+        <form action="/" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">อัปโหลดไฟล์ PDF ที่ต้องการสรุป (หรือป้อนข้อความด้านล่าง):</label>
+                <input type="file" name="file" id="file" class="form-control-file">
             </div>
-
-            <!-- ฝั่งผลลัพธ์ (ขวา) -->
-            <div class="col-md-6">
-                <h2>ผลลัพธ์การสรุป:</h2>
-                <p class="border p-3" id="summaryText">ผลลัพธ์การสรุปจะแสดงที่นี่</p>
-                <small class="text-muted">จำนวนคำในผลลัพธ์: <span id="outputWordCount">0</span></small>
+            <div class="form-group">
+                <label for="text">หรือใส่ข้อความที่ต้องการสรุป:</label>
+                <textarea name="text" id="text" rows="10" class="form-control"></textarea>
             </div>
-        </div>
+            <div class="form-group">
+                <label>เลือกวิธีการสรุป:</label><br>
+                <div class="form-check form-check-inline">
+                    <input type="radio" id="extractive" name="method" value="extractive" class="form-check-input" checked>
+                    <label for="extractive" class="form-check-label">การสรุปแบบดึงประโยคสำคัญ</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="radio" id="abstractive" name="method" value="abstractive" class="form-check-input">
+                    <label for="abstractive" class="form-check-label">การสรุปแบบสร้างสรรค์ใหม่</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="length">เลือกความยาวของสรุป:</label>
+                <select name="length" id="length" class="form-control">
+                    <option value="short">สั้น</option>
+                    <option value="medium">กลาง</option>
+                    <option value="long">ยาว</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">สรุปข้อความ</button>
+        </form>
     </div>
-
-    <!-- ลิงค์ไปที่ Bootstrap JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- JavaScript เพื่อคำนวณจำนวนคำและสรุปข้อความ -->
-    <script>
-        function updateInputCount() {
-            const inputText = document.getElementById("text").value;
-            const wordCount = inputText.trim().split(/\s+/).filter(word => word.length > 0).length;
-            document.getElementById("inputWordCount").innerText = wordCount;
-        }
-
-        function updateOutputCount() {
-            const outputText = document.getElementById("summaryText").innerText;
-            const wordCount = outputText.trim().split(/\s+/).filter(word => word.length > 0).length;
-            document.getElementById("outputWordCount").innerText = wordCount;
-        }
-
-        function generateSummary() {
-            const text = document.getElementById("text").value;
-            const summaryType = document.getElementById("summary_type").value;
-
-            let summary = "";
-
-            if (summaryType === "short") {
-                summary = text.slice(0, 50) + "..."; // ตัวอย่างสรุปแบบสั้น
-            } else if (summaryType === "medium") {
-                summary = text.slice(0, 100) + "..."; // ตัวอย่างสรุปแบบกลาง
-            } else if (summaryType === "long") {
-                summary = text.slice(0, 150) + "..."; // ตัวอย่างสรุปแบบยาว
-            }
-
-            // แสดงผลลัพธ์การสรุป
-            document.getElementById("summaryText").innerText = summary;
-            updateOutputCount(); // อัปเดตจำนวนคำในผลลัพธ์
-        }
-    </script>
+    <!-- เพิ่ม Bootstrap JS และ dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

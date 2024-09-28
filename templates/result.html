@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ผลการสรุปข้อความ</title>
+    <!-- เพิ่ม Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">ผลการสรุปข้อความ</h1>
+        <div class="card mb-3">
+            <div class="card-header">
+                ข้อความต้นฉบับ
+            </div>
+            <div class="card-body">
+                <p>{{ original_text }}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                ข้อความสรุป
+            </div>
+            <div class="card-body">
+                <p>{{ summary }}</p>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-secondary">กลับไปหน้าหลัก</a>
+        </div>
+    </div>
+    <!-- เพิ่ม Bootstrap JS และ dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

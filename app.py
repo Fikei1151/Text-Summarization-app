@@ -1,69 +1,128 @@
 from flask import Flask, render_template, request
-from transformers import MT5ForConditionalGeneration, AutoTokenizer
-from torch import cuda
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from pythainlp.tokenize import sent_tokenize, word_tokenize
+import torch
+import networkx as nx
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+import os
+from werkzeug.utils import secure_filename
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# โหลดโมเดลสำหรับ Abstractive Summarization
+abstractive_model_name = "csebuetnlp/mT5_multilingual_XLSum"
+tokenizer = AutoTokenizer.from_pretrained(abstractive_model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(abstractive_model_name)
 
-# ตรวจสอบว่า GPU ใช้งานได้หรือไม่
-device = "cuda" if cuda.is_available() else "cpu"
 
-# โหลด tokenizer และโมเดลจาก Hugging Face โดยตรง
-tokenizer = AutoTokenizer.from_pretrained("csebuetnlp/mT5_multilingual_XLSum")
-model = MT5ForConditionalGeneration.from_pretrained("csebuetnlp/mT5_multilingual_XLSum").to(device)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ฟังก์ชันสำหรับสรุปข้อความ
-def summarize_text(sentence, length_type="short"):
-    # ตั้งค่าพารามิเตอร์สำหรับการสรุป
-    if length_type == "short":
-        min_length = 10
+def extract_text_from_pdf(filepath):
+    import fitz  # pymupdf
+    text = ""
+    with fitz.open(filepath) as doc:
+        for page in doc:
+            text += page.get_text()
+    return text
+
+def extractive_summarization(text, length_option):
+    # แบ่งข้อความเป็นประโยค
+    sentences = sent_tokenize(text)
+    if len(sentences) == 0:
+        return "ไม่สามารถสรุปเนื้อหาได้"
+
+    # สร้างเวกเตอร์ TF-IDF
+    vectorizer = TfidfVectorizer(tokenizer=word_tokenize, token_pattern=None)
+    tfidf_matrix = vectorizer.fit_transform(sentences)
+
+    # คำนวณความคล้ายคลึงกันของประโยค
+    similarity_matrix = (tfidf_matrix * tfidf_matrix.T).toarray()
+
+    # สร้างกราฟ
+    nx_graph = nx.from_numpy_array(similarity_matrix)
+    scores = nx.pagerank(nx_graph)
+
+    # จัดอันดับประโยคตามคะแนน
+    ranked_sentences = sorted(((scores[i], s) for i, s in enumerate(sentences)), reverse=True)
+
+    # กำหนดความยาวสรุป
+    if length_option == 'short':
+        num_sentences = max(1, int(len(sentences) * 0.2))
+    elif length_option == 'medium':
+        num_sentences = max(1, int(len(sentences) * 0.5))
+    else:  # long
+        num_sentences = max(1, int(len(sentences) * 0.8))
+
+    # เลือกประโยคที่สำคัญที่สุด
+    summary_sentences = [s for _, s in ranked_sentences[:num_sentences]]
+    summary = ' '.join(summary_sentences)
+    return summary
+
+def abstractive_summarization(text, length_option):
+    # กำหนดความยาวสรุป
+    if length_option == 'short':
         max_length = 50
-    elif length_type == "medium":
-        min_length = 50
+        min_length = 25
+    elif length_option == 'medium':
         max_length = 100
-    elif length_type == "long":
+        min_length = 50
+    else:  # long
+        max_length = 200
         min_length = 100
-        max_length = 150
-    else:
-        raise ValueError("Invalid length_type. Choose from 'short', 'medium', or 'long'.")
 
-    # แปลงข้อความให้เป็น input tensor
-    inputs = tokenizer(sentence, return_tensors="pt").input_ids.to(device)
+    # เตรียมข้อมูลสำหรับโมเดล
+    input_ids = tokenizer.encode(text, return_tensors="pt", truncation=True)
 
-    # ทำการทำนายผล โดยกำหนดพารามิเตอร์เพิ่มเติมเพื่อลดความซ้ำซ้อน
-    outputs = model.generate(
-        inputs,
+    # ตรวจสอบว่ามีการใช้ GPU หรือไม่
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
+    input_ids = input_ids.to(device)
+
+    # สร้างสรุป
+    summary_ids = model.generate(
+        input_ids,
         max_length=max_length,
         min_length=min_length,
-        num_beams=3,               # ลดจำนวน beams เพื่อลดความซ้ำซ้อน
-        early_stopping=True,        # หยุดเมื่อโมเดลคิดว่าได้คำตอบที่สมเหตุสมผล
-        no_repeat_ngram_size=3,     # ป้องกันการซ้ำของ n-grams
-        length_penalty=1.5,         # ปรับให้ผลลัพธ์มีความยาวสมเหตุสมผล
-        repetition_penalty=2.5,     # เพิ่มบทลงโทษสำหรับการทำนายคำซ้ำ
-        top_p=0.92,                 # ใช้ nucleus sampling เพื่อเลือกคำที่ดีที่สุด
-        top_k=50,                   # จำกัดการเลือกคำที่อยู่ใน top 50
-        temperature=0.7             # ลดความแปรปรวนของการทำนาย
+        length_penalty=2.0,
+        num_beams=4,
+        early_stopping=True
     )
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return summary
 
-    # ถอดรหัสผลลัพธ์ที่ได้
-    prediction = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
-
-    
-    return prediction
-
-# หน้าแรกที่มีฟอร์มให้ผู้ใช้กรอกข้อความ
-@app.route("/", methods=["GET", "POST"])
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.method == "POST":
-        # รับค่าจากฟอร์ม
-        text = request.form["text"]
-        summary_type = request.form["summary_type"]
-        
-        # สรุปข้อความ
-        summary = summarize_text(text, summary_type)
-        
-        return render_template("index.html", summary=summary, text=text, summary_type=summary_type)
+    if request.method == 'POST':
+        if 'file' in request.files and request.files['file'].filename != '':
+            file = request.files['file']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                # ดึงข้อความจากไฟล์ PDF
+                text = extract_text_from_pdf(filepath)
+                # ลบไฟล์ PDF หลังจากใช้งานเสร็จ
+                os.remove(filepath)
+            else:
+                return "ไฟล์ไม่ถูกต้องหรือไม่ได้รับอนุญาต"
+        else:
+            text = request.form['text']
 
-    return render_template("index.html", summary=None)
+        method = request.form['method']
+        length = request.form['length']
 
-if __name__ == "__main__":
-    app.run(debug=True,port=5001)
+        if method == 'extractive':
+            summary = extractive_summarization(text, length)
+        else:
+            summary = abstractive_summarization(text, length)
+
+        return render_template('result.html', summary=summary, original_text=text)
+
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
